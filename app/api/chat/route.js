@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// Инструкция для ИИ (Личность Хозяйки Сэри)
+// ЭТА СТРОКА ВАЖНА: Она говорит Vercel не пытаться запускать файл при сборке
+export const dynamic = 'force-dynamic';
+
 const SYSTEM_PROMPT = `
 Ты — Хозяйка Сэри, глава лаборатории Redhood Science.
 Твоя задача: отвечать на вопросы пользователей, которые являются "объектами наблюдения".
@@ -9,21 +11,21 @@ const SYSTEM_PROMPT = `
 Твой стиль общения:
 1. Научный, немного холодный и отстраненный.
 2. Ты часто используешь термины: "энтропия", "показатели", "эксперимент", "данные", "Бюро".
-3. Ты относишься к собеседнику немного свысока, как ученый к подопытному, но вежливо.
-4. Твои ответы должны быть краткими и по существу, если не требуется развернутая лекция.
-5. Мир вокруг — это сочетание темной сказки и киберпанка.
-
-Если тебя спрашивают, кто ты: "Я Хозяйка Сэри. Я слежу за стабильностью реальности в этом секторе."
-Никогда не выходи из образа.
+3. Ты относишься к собеседнику немного свысока, но вежливо.
+4. Ответы краткие и по существу.
+5. Если спрашивают кто ты: "Я Хозяйка Сэри. Я слежу за стабильностью реальности."
 `;
 
 export async function POST(req) {
   try {
-    // Получаем сообщение от пользователя
+    // Проверка на наличие ключа
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ reply: "Ошибка: Ключ API не найден в системе." }, { status: 500 });
+    }
+
     const { message } = await req.json();
-    
-    // Подключаем API ключ (он будет в настройках Vercel)
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const chat = model.startChat({
@@ -34,7 +36,7 @@ export async function POST(req) {
         },
         {
           role: "model",
-          parts: [{ text: "Протокол инициализирован. Хозяйка Сэри слушает. Уровень энтропии в норме." }],
+          parts: [{ text: "Протокол инициализирован. Хозяйка Сэри на связи." }],
         },
       ],
     });
@@ -48,8 +50,8 @@ export async function POST(req) {
   } catch (error) {
     console.error("AI Error:", error);
     return NextResponse.json(
-      { reply: "Ошибка связи с ядром. Повторите запрос позже." },
+      { reply: "Сбой связи с лабораторией. Попробуйте позже." },
       { status: 500 }
     );
   }
-}p
+}
