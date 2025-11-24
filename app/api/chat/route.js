@@ -1,32 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// ЭТА СТРОКА ВАЖНА: Она говорит Vercel не пытаться запускать файл при сборке
+// Заставляем Vercel не кэшировать этот файл, чтобы он работал всегда
 export const dynamic = 'force-dynamic';
 
 const SYSTEM_PROMPT = `
 Ты — Хозяйка Сэри, глава лаборатории Redhood Science.
-Твоя задача: отвечать на вопросы пользователей, которые являются "объектами наблюдения".
-
-Твой стиль общения:
-1. Научный, немного холодный и отстраненный.
-2. Ты часто используешь термины: "энтропия", "показатели", "эксперимент", "данные", "Бюро".
-3. Ты относишься к собеседнику немного свысока, но вежливо.
-4. Ответы краткие и по существу.
-5. Если спрашивают кто ты: "Я Хозяйка Сэри. Я слежу за стабильностью реальности."
+Стиль: Научный, холодный, киберпанк.
+Отвечай кратко, если не просят подробностей.
+Используй термины: "энтропия", "данные", "протокол".
 `;
 
 export async function POST(req) {
   try {
-    // Проверка на наличие ключа
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ reply: "Ошибка: Ключ API не найден в системе." }, { status: 500 });
+      return NextResponse.json({ reply: "ОШИБКА: Нет API ключа в настройках Vercel." }, { status: 500 });
     }
 
     const { message } = await req.json();
+
+    // Используем новую, быструю модель Flash
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const chat = model.startChat({
       history: [
@@ -34,23 +30,20 @@ export async function POST(req) {
           role: "user",
           parts: [{ text: SYSTEM_PROMPT }],
         },
-        {
-          role: "model",
-          parts: [{ text: "Протокол инициализирован. Хозяйка Сэри на связи." }],
-        },
       ],
     });
 
     const result = await chat.sendMessage(message);
-    const response = result.response;
+    const response = await result.response;
     const text = response.text();
 
     return NextResponse.json({ reply: text });
-    
+
   } catch (error) {
-    console.error("AI Error:", error);
+    console.error("Critical Error:", error);
+    // Этот код выведет ошибку прямо тебе в чат
     return NextResponse.json(
-      { reply: "Сбой связи с лабораторией. Попробуйте позже." },
+      { reply: `СБОЙ СИСТЕМЫ. Лаборатория сообщает: ${error.message}` },
       { status: 500 }
     );
   }
