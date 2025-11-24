@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Beaker, Info, Sparkles } from 'lucide-react';
 
-// --- СТИЛИ ---
 const THEME = {
   bg: "bg-zinc-950",
   text: "text-zinc-200",
@@ -14,7 +13,7 @@ export default function RedhoodChat() {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Система Redhood Science® онлайн. Хозяйка Сэри готова к взаимодействию. Введите запрос, объект наблюдения.",
+      text: "Система Redhood Science® онлайн. Хозяйка Сэри готова к взаимодействию.",
       sender: 'ai',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -36,9 +35,8 @@ export default function RedhoodChat() {
     if (!input.trim()) return;
 
     const userText = input;
-    setInput(''); // Очистить поле сразу
+    setInput('');
 
-    // 1. Добавляем сообщение пользователя
     const userMsg = {
       id: Date.now(),
       text: userText,
@@ -49,18 +47,19 @@ export default function RedhoodChat() {
     setIsTyping(true);
 
     try {
-      // 2. Отправляем запрос на наш Бэкенд
+      // ИСПРАВЛЕНИЕ: Мы жестко задаем адрес, чтобы исключить невидимые символы
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText })
       });
 
-      if (!response.ok) throw new Error('Network error');
-      
       const data = await response.json();
 
-      // 3. Добавляем ответ ИИ
+      if (!response.ok) {
+        throw new Error(data.reply || `Ошибка сервера: ${response.status}`);
+      }
+
       const aiMsg = {
         id: Date.now() + 1,
         text: data.reply,
@@ -69,10 +68,10 @@ export default function RedhoodChat() {
       };
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
-      // Обработка ошибки
+      console.error(error); // Для отладки
       const errorMsg = {
         id: Date.now() + 1,
-        text: "Сбой соединения с лабораторией. Попробуйте позже.",
+        text: `⚠️ СБОЙ СВЯЗИ: ${error.message}`,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -84,8 +83,6 @@ export default function RedhoodChat() {
 
   return (
     <div className={`flex flex-col h-screen ${THEME.bg} ${THEME.text} font-sans overflow-hidden`}>
-      
-      {/* HEADER */}
       <header className="flex items-center justify-between px-6 py-4 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800 z-10">
         <div className="flex items-center gap-4">
           <div className="relative group">
@@ -109,7 +106,6 @@ export default function RedhoodChat() {
         </button>
       </header>
 
-      {/* CHAT AREA */}
       <main className="flex-1 overflow-y-auto p-4 space-y-6">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -137,7 +133,6 @@ export default function RedhoodChat() {
         <div ref={messagesEndRef} />
       </main>
 
-      {/* INPUT */}
       <footer className="p-4 bg-zinc-900 border-t border-zinc-800">
         <form onSubmit={handleSend} className="max-w-4xl mx-auto flex items-end gap-3 relative">
           <div className="flex-1 relative">
@@ -160,3 +155,4 @@ export default function RedhoodChat() {
 }
 
 
+    
