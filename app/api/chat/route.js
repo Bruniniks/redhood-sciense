@@ -22,7 +22,7 @@ export async function POST(req) {
 
     // Используем новую, быструю модель Flash
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genai.GenerativeModel('gemini-2.0-flash');
 
     const chat = model.startChat({
       history: [
