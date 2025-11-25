@@ -1,50 +1,38 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { NextResponse } from "next/server";
+import google.generativeai as genai
+import os
+import getpass
 
-// Заставляем Vercel не кэшировать этот файл, чтобы он работал всегда
-export const dynamic = 'force-dynamic';
+# --- 1. НАСТРОЙКА ---
+if "GOOGLE_API_KEY" not in os.environ:
+    os.environ["GOOGLE_API_KEY"] = getpass.getpass("Введите API Key: ")
 
-const SYSTEM_PROMPT = `
-Ты — Хозяйка Сэри, глава лаборатории Redhood Science.
-Стиль: Научный, холодный, киберпанк.
-Отвечай кратко, если не просят подробностей.
-Используй термины: "энтропия", "данные", "протокол".
-`;
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
-export async function POST(req) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ reply: "ОШИБКА: Нет API ключа в настройках Vercel." }, { status: 500 });
-    }
+# Создаем модель и запускаем ЧАТ (History)
+model = genai.GenerativeModel('gemini-2.0-flash')
+chat = model.start_chat(history=[])
 
-    const { message } = await req.json();
+print("\n" + "="*40)
+print("✅ РЕЖИМ ДИАЛОГА АКТИВИРОВАН")
+print("ИИ помнит контекст беседы. Для выхода введите 'exit'.")
+print("="*40 + "\n")
 
-    // Используем новую, быструю модель Flash
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genai.GenerativeModel('gemini-2.0-flash');
+# --- 2. БЕСКОНЕЧНЫЙ ЦИКЛ ОБЩЕНИЯ ---
+while True:
+    # Ждем ввода от вас прямо в консоли
+    user_input = input("ВЫ (Михаил): ")
+    
+    if user_input.lower() in ['exit', 'quit', 'выход']:
+        print("Сеанс завершен.")
+        break
+    
+    if not user_input.strip():
+        continue
 
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
-      ],
-    });
-
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    const text = response.text();
-
-    return NextResponse.json({ reply: text });
-
-  } catch (error) {
-    console.error("Critical Error:", error);
-    // Этот код выведет ошибку прямо тебе в чат
-    return NextResponse.json(
-      { reply: `СБОЙ СИСТЕМЫ. Лаборатория сообщает: ${error.message}` },
-      { status: 500 }
-    );
-  }
-}
+    try:
+        # Отправляем сообщение в чат
+        response = chat.send_message(user_input)
+        print(f"\n🤖 ИИ: {response.text}")
+        print("-" * 20)
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
