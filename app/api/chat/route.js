@@ -1,38 +1,40 @@
-import google.generativeai as genai
-import os
-import getpass
+// Импортируем библиотеку Google (JS версия) и инструменты Next.js
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
 
-# --- 1. НАСТРОЙКА ---
-if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = getpass.getpass("Введите API Key: ")
-
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-
-# Создаем модель и запускаем ЧАТ (History)
-model = genai.GenerativeModel('gemini-2.0-flash')
-chat = model.start_chat(history=[])
-
-print("\n" + "="*40)
-print("✅ РЕЖИМ ДИАЛОГА АКТИВИРОВАН")
-print("ИИ помнит контекст беседы. Для выхода введите 'exit'.")
-print("="*40 + "\n")
-
-# --- 2. БЕСКОНЕЧНЫЙ ЦИКЛ ОБЩЕНИЯ ---
-while True:
-    # Ждем ввода от вас прямо в консоли
-    user_input = input("ВЫ (Михаил): ")
+// Эта функция обрабатывает POST-запросы с вашего сайта
+export async function POST(req) {
+  try {
+    // 1. Получаем сообщение от пользователя
+    const body = await req.json();
+    const { messages } = body;
     
-    if user_input.lower() in ['exit', 'quit', 'выход']:
-        print("Сеанс завершен.")
-        break
-    
-    if not user_input.strip():
-        continue
+    // Берем последнее сообщение пользователя
+    const lastMessage = messages[messages.length - 1].content;
 
-    try:
-        # Отправляем сообщение в чат
-        response = chat.send_message(user_input)
-        print(f"\n🤖 ИИ: {response.text}")
-        print("-" * 20)
-    except Exception as e:
-        print(f"❌ Ошибка: {e}")
+    // 2. Подключаемся к Gemini
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+        return NextResponse.json({ error: "Ключ API не найден" }, { status: 500 });
+    }
+    
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // Используем модель, которая точно работает (проверено нами)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // 3. Генерируем ответ
+    const result = await model.generateContent(lastMessage);
+    const response = await result.response;
+    const text = response.text();
+
+    // 4. Отправляем ответ обратно на сайт
+    return NextResponse.json({ 
+        role: 'assistant', 
+        content: text 
+    });
+
+  } catch (error) {
+    console.error("Сбой в Бюро:", error);
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
+  }
+}
